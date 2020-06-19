@@ -6,15 +6,17 @@ from solvers.linear_programming import LinearProgramming
 import matplotlib.pyplot as plt
 from matplotlib.path import Path
 import matplotlib.patches as patches 
+from numpy import linalg as LA
+import math
 
 def solve(Model):
 
     r_max = 9
-    delta_r = 0.045
+    delta_r = 0.15  #0.045
 
     alpha_max = np.pi
     alpha_min = - alpha_max
-    delta_alpha = 2 * np.pi / 361
+    delta_alpha = 2 * np.pi / 91 # 361
 
     sigma = 0.1
 
@@ -67,12 +69,16 @@ def solve(Model):
         n_actions,
         rewards,
         state_transition_probs,
-        1-np.finfo(np.float32).eps
+        0.99 #1-np.finfo(np.float32).eps
     )
-    model.fit(max_iteration=1000000, tolerance=1e-4, verbose=True, logging=False)
+    model.fit(max_iteration=1000000, tolerance=1e-6, verbose=True, logging=False, dual = False)
 
     np.save('values.npy', model.values)
     np.save('policy.npy', model.policy)
+
+    plt.imshow(model.policy.reshape((-1,91)))
+    # plt.imshow(model.values.reshape((-1,181)))
+    plt.show()
     
     return model.values.copy(), model.policy.copy()
 
@@ -81,51 +87,64 @@ def simulate(initial_pose, target, dt, max_time):
 
     r_max = 9
     r_min = 0.01
-    delta_r = 0.045
+    delta_r = 0.045 #0.045
 
     alpha_max = np.pi
     alpha_min = - alpha_max
-    delta_alpha = 2 * np.pi / 361
+    delta_alpha = 2 * np.pi / 361 #361
 
     sigma = 0.1
 
     r_list = np.linspace(0, r_max, int(r_max / delta_r) + 1)
     alpha_list = np.arange(alpha_min, alpha_max, delta_alpha)
     n_alpha = len(alpha_list)
-
-    policy = np.load('policy.npy')
+    # print(n_alpha)
+    policy = np.load('policy_value.npy')
 
     trajectory = []
     target = np.array(target, dtype=np.float32)
     pose = np.array(initial_pose, dtype=np.float32)
     for t in np.arange(0, max_time, dt):
-        r = np.linalg.norm(pose[:2]-target)
+        r = np.linalg.norm(pose[:2]-target) # distance from current position to the target
         alpha = np.arctan2(
             target[1] - pose[1], target[0] - pose[0]
-        ) - pose[2]
+        ) - pose[2] # arctan(y,x) - heading
         if alpha >= np.pi:
             alpha -= 2 * np.pi
-        elif alpha < np.pi:
+        elif alpha < -np.pi:
             alpha += 2 * np.pi
-        r_idx = np.argmax(np.abs(r_list - r))
-        alpha_idx = np.argmax(np.abs(alpha_list - alpha))
+        r_idx = np.argmin(np.abs(r_list - r))
+        alpha_idx = np.argmin(np.abs(alpha_list - alpha))
+        # print(alpha_idx) # 0 or 360 only
         a = policy[r_idx * n_alpha + alpha_idx]
-
+        # print(a) # there is only 1
+        # print(r_idx * n_alpha + alpha_idx)
         pose[0] += np.cos(pose[2]) * dt
         pose[1] += np.sin(pose[2]) * dt
         if a==0:
             pose[2] -= dt
         else:
             pose[2] += dt
+        # np.random.seed(seed=100)
         pose[2] += np.random.normal(scale=sigma) * dt
+        # print(np.random.normal(scale=sigma) * dt)
         if pose[2] >= np.pi:
             pose[2] -= 2 * np.pi
-        elif pose[2] < np.pi:
+        elif pose[2] < - np.pi:
             pose[2] += 2 * np.pi
         trajectory.append([t]+list(pose))
 
         if r < r_min:
             break
+    
+    traj = np.array(trajectory)
+    head_angle = traj[:,3]
+    coord = traj[:,1:3]
+    x = coord[:,0]
+    y = coord[:,1]
+    plt.plot(x,y)
+
+    plt.show()
 
     return np.array(trajectory)
 
@@ -142,8 +161,30 @@ def showValue():
     print("end")
 
 
+def comparePolicy():
+    
+    policy_LP = np.load('policy_LP.npy')
+    policy_value = np.load('policy_value.npy')
+    policy_policy = np.load('policy_policy.npy')
+
+    value_LP = np.load('values.npy')
+    # each of them has 72561 component which consists of 0 and 1
+
+    # plt.imshow(policy_value.reshape((-1,361)))
+    # plt.imshow(policy_policy.reshape((-1,361)))
+    
+    # plt.imshow(policy_value.reshape((-1,361)))
+    # plt.show()
+
+    diff_LP = np.linalg.norm(policy_policy - policy_LP)
+    diff_val = np.linalg.norm(policy_policy - policy_value)
+    print(policy_value.shape)
+    print("diff_LP=",diff_LP)
+    print("diff_val=",diff_val)
+    
+
 def showTraject():
-    traj = np.load('trajectory.npy')
+    traj = np.load('trajectory_value.npy')
     verts = traj[:,1:3]
 
     codes = [
@@ -169,11 +210,12 @@ if __name__=='__main__':
     # values, policy = solve(ValueIteration)
     # values, policy = solve(LinearProgramming)
     # showValue()
-    # trajectory = simulate(
-    #     initial_pose = [0, 0, 0],
-    #     target = [1, 1],
-    #     dt = 0.001,
-    #     max_time = 10
-    # )
-    # np.save('trajectory.npy', trajectory)
-    showTraject()
+    trajectory = simulate(
+        initial_pose = [0, 0, 5/4*math.pi], #[0,0,0]
+        target = [1, 1], #[1,1]
+        dt = 0.001, #0.001
+        max_time = 10 #10
+    )
+    np.save('trajectory_value.npy', trajectory)
+    # comparePolicy()
+    # showTraject()

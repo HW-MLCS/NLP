@@ -38,7 +38,7 @@ class LinearProgramming(object):
             (np.ones((num_actions, 1), dtype=np.float32),) * num_states,
             format='csc'
         )
-        self.b = -np.reshape(self.rewards, (-1))
+        self.b = - np.reshape(self.rewards, -1)
     
 
     def fit(self, max_iteration=1e3, tolerance=1e-3, verbose=False, logging=False, dual=False):
@@ -54,7 +54,7 @@ class LinearProgramming(object):
                     'maxiter':max_iteration,
                     'tol':tolerance,
                     'disp':verbose,
-                    'sparse':True
+                    'sparse':False
                 }
             )
             self.policy = np.argmax(np.reshape(res.x, (self.num_states, -1)), axis=1)
@@ -76,7 +76,7 @@ class LinearProgramming(object):
                     'maxiter':max_iteration,
                     'tol':tolerance,
                     'disp':verbose,
-                    'sparse':True
+                    'sparse':False
                 }
             )
             self.values = res.x
