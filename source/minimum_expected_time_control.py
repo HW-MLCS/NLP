@@ -8,6 +8,7 @@ from matplotlib.path import Path
 import matplotlib.patches as patches 
 from numpy import linalg as LA
 import math
+import pandas
 
 def solve(Model):
 
@@ -99,6 +100,8 @@ def simulate(initial_pose, target, dt, max_time):
     alpha_list = np.arange(alpha_min, alpha_max, delta_alpha)
     n_alpha = len(alpha_list)
     # print(n_alpha)
+    csv_policy = np.loadtxt("policy_LP.csv",delimiter=",",dtype=np.float32)
+    csv_policy = np.genfromtxt("policy_LP.csv",delimiter=",",dtype=np.float32)
     policy = np.load('policy_value.npy')
 
     trajectory = []
