@@ -30,7 +30,6 @@ class PolicyIteration(object):
         self.discount = discount
         self.state_transition_probs = state_transition_probs
 
-
         # Identity matrix $I_{|s|}$ and $I_{|a|}$ for computation
         self._I_s = identity(num_states, dtype=np.float32, format='csr')
         self._I_a = np.eye(num_actions)

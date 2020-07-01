@@ -82,7 +82,6 @@ class ValueIteration(object):
             return diff
 
 
-
 def test(Model):
     """
     Test code for debugging

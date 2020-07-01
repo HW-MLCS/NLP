@@ -86,6 +86,7 @@ def solve(Model):
 
 def simulate(initial_pose, target, dt, max_time):
 
+    print(initial_pose[2]*180/math.pi)
     r_max = 9
     r_min = 0.01
     delta_r = 0.045 #0.045
@@ -100,9 +101,14 @@ def simulate(initial_pose, target, dt, max_time):
     alpha_list = np.arange(alpha_min, alpha_max, delta_alpha)
     n_alpha = len(alpha_list)
     # print(n_alpha)
-    csv_policy = np.loadtxt("policy_LP.csv",delimiter=",",dtype=np.float32)
-    csv_policy = np.genfromtxt("policy_LP.csv",delimiter=",",dtype=np.float32)
-    policy = np.load('policy_value.npy')
+    
+    
+    policy, value_LP =  csvToNpy()
+    
+    # policy = np.load('policy_value.npy')
+    # policy = np.load('policy_policy.npy')
+    # print(policy)
+    # print(policy.shape)
 
     trajectory = []
     target = np.array(target, dtype=np.float32)
@@ -139,49 +145,87 @@ def simulate(initial_pose, target, dt, max_time):
 
         if r < r_min:
             break
-    
+    plt.figure(figsize=(10,8))
+    # plt.xlim()
     traj = np.array(trajectory)
     head_angle = traj[:,3]
     coord = traj[:,1:3]
     x = coord[:,0]
     y = coord[:,1]
+    print(y.shape)
     plt.plot(x,y)
+    plt.arrow(0,0, x[40]-x[0],y[40]-y[0],head_width=0.07, head_length=0.09,width=0.01, overhang=0.5)
+    plt.arrow(x[-1],y[-1], 1-x[-50],1-y[-50],head_width=0.07, head_length=0.09,width=0.01, overhang=0.5)
+    # plt.arrow(0,0, x[40]-x[0],y[40]-y[0],head_width=0.07/2, head_length=0.09/2,width=0.01/2, overhang=0.5)
+    # plt.arrow(x[-50],y[-50], 1-x[-50],1-y[-50],head_width=0.07/2, head_length=0.09/2,width=0.01/2, overhang=0.5)
+    plt.text(0.05,0, "Initial point",fontsize = 14)
+    plt.text(0.5,1, "Target point",fontsize = 14)
+    plt.xticks(fontsize = 14)
+    plt.yticks(fontsize = 14)
+    plt.xlabel("X (m)", fontsize = 20)
+    plt.ylabel("Y (m)", fontsize = 20, rotation=0, labelpad=30)
+    # plt.title("Robot trajectory", fontsize=20)
+
 
     plt.show()
 
     return np.array(trajectory)
 
 
-def showValue():
-    value = np.load('values.npy')
-    print(value.shape)
-    print(value)
+def csvToNpy():
+    policy_dataframe = pandas.read_csv("policy_LP.csv",header=None)
+    policy_array = np.array(policy_dataframe)
+    policy_array = np.ravel(policy_array.T)
 
-    plt.plot(value)
-    # plt.plot(value)
+    value_dataframe = pandas.read_csv("value_LP.csv",header=None)
+    value_array = np.array(value_dataframe)
+    value_array = np.ravel(value_array.T)
 
-    plt.show()
-    print("end")
+
+    return policy_array, value_array
 
 
 def comparePolicy():
     
-    policy_LP = np.load('policy_LP.npy')
+    policy_LP, value_LP =  csvToNpy()
+
+    # policy_LP = np.load('policy_LP.npy')
     policy_value = np.load('policy_value.npy')
     policy_policy = np.load('policy_policy.npy')
 
-    value_LP = np.load('values.npy')
+    value_value = np.load('values_value.npy')
+    value_policy = np.load('values_policy.npy')
+
+    # value_LP = np.load('values.npy')
     # each of them has 72561 component which consists of 0 and 1
 
-    # plt.imshow(policy_value.reshape((-1,361)))
+    plt.figure(figsize=(10,18))
+    plt.subplot(2,1,1)
+    # plt.imshow(policy_LP.reshape((-1,361)))
+    plt.imshow(policy_value.reshape((-1,361)))
     # plt.imshow(policy_policy.reshape((-1,361)))
+    plt.colorbar()
+    plt.xticks(fontsize = 14)
+    plt.yticks(fontsize = 14)
+    plt.xlabel(r"$\alpha$", fontsize = 25)
+    plt.ylabel("R", fontsize = 25, rotation=0, labelpad=10)
+    # plt.title('Policy')
     
-    # plt.imshow(policy_value.reshape((-1,361)))
-    # plt.show()
+    plt.subplot(2,1,2)
+    # plt.imshow(value_LP.reshape((-1,361)))
+    plt.imshow(value_value.reshape((-1,361)))
+    # plt.imshow(value_policy.reshape((-1,361)))
+    plt.colorbar()
+    plt.xticks(fontsize = 14)
+    plt.yticks(fontsize = 14)
+    plt.xlabel(r"$\alpha$", fontsize = 25)
+    plt.ylabel("R", fontsize = 25, rotation=0, labelpad=10)
+    # plt.title('Value')
+
+    plt.show()
 
     diff_LP = np.linalg.norm(policy_policy - policy_LP)
     diff_val = np.linalg.norm(policy_policy - policy_value)
-    print(policy_value.shape)
     print("diff_LP=",diff_LP)
     print("diff_val=",diff_val)
     
@@ -219,6 +263,8 @@ if __name__=='__main__':
         dt = 0.001, #0.001
         max_time = 10 #10
     )
-    np.save('trajectory_value.npy', trajectory)
+    # np.save('trajectory_value.npy', trajectory)
+
     # comparePolicy()
+    
     # showTraject()
